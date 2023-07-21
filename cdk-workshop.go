@@ -1,10 +1,10 @@
 package main
 
 import (
+	"cdk-workshop/hitcounter"
 	"github.com/aws/aws-cdk-go/awscdk/v2"
-	"github.com/aws/aws-cdk-go/awscdk/v2/awssns"
-	"github.com/aws/aws-cdk-go/awscdk/v2/awssnssubscriptions"
-	"github.com/aws/aws-cdk-go/awscdk/v2/awssqs"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awsapigateway"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
 )
@@ -18,15 +18,29 @@ func NewCdkWorkshopStack(scope constructs.Construct, id string, props *CdkWorksh
 	if props != nil {
 		sprops = props.StackProps
 	}
+
+	// Note(constructor and construct): NewStack and NewFunction both have the signature (scope, id, props)
+	// because both of them are constructs. They represent abstract cloud components.
+	// constructs can be included in the scope of other constructs
+	// @args scope: is the construct that you are creating your construct in
+	//		id: must be unique in the current scope, used to calculate the logical ID in cloudFormation
+	// 		props: the initialization properties for your construct
+
 	stack := awscdk.NewStack(scope, &id, &sprops)
 
-
-	queue := awssqs.NewQueue(stack, jsii.String("CdkWorkshopQueue"), &awssqs.QueueProps{
-		VisibilityTimeout: awscdk.Duration_Seconds(jsii.Number(300)),
+	helloHandler := awslambda.NewFunction(stack, jsii.String("HelloHandler"), &awslambda.FunctionProps{
+		Code:    awslambda.Code_FromAsset(jsii.String("lambda"), nil),
+		Runtime: awslambda.Runtime_NODEJS_16_X(),
+		Handler: jsii.String("hello.handler"),
 	})
 
-	topic := awssns.NewTopic(stack, jsii.String("CdkWorkshopTopic"), &awssns.TopicProps{})
-	topic.AddSubscription(awssnssubscriptions.NewSqsSubscription(queue, &awssnssubscriptions.SqsSubscriptionProps{}))
+	hitcounter := hitcounter.NewHitCounter(stack, "HelloHitCounter", &hitcounter.HitCounterProps{
+		Downstream: helloHandler,
+	})
+
+	awsapigateway.NewLambdaRestApi(stack, jsii.String("Endpoint"), &awsapigateway.LambdaRestApiProps{
+		Handler: hitcounter.Handler(),
+	})
 
 	return stack
 }
