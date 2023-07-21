@@ -42,6 +42,11 @@ func NewCdkWorkshopStack(scope constructs.Construct, id string, props *CdkWorksh
 		Handler: hitcounter.Handler(),
 	})
 
+	dynamotableviewer.NewTableViewer(stack, jsii.String("ViewHitCounter"), &dynamotableviewer.TableViewerProps{
+		Title: jsii.String("Hello Hits"),
+		Table: //?????
+	})
+
 	return stack
 }
 
